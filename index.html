@@ -1,0 +1,763 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#0b0f17">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Speak Coach">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-180.png">
+<title>Speak Coach</title>
+<style>
+:root{--bg:#0b0f17;--card:#141a26;--card2:#1b2333;--line:#263047;--tx:#e8ecf4;--mut:#8b96ad;--acc:#5b8cff;--ok:#3ddc97;--warn:#ffb454;--rec:#ff5c7a}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--tx);font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overscroll-behavior:none}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer;border:0;background:none}
+[hidden]{display:none!important}
+#app{height:100dvh;display:flex;flex-direction:column;max-width:520px;margin:0 auto}
+.view{flex:1;overflow-y:auto;padding:calc(env(safe-area-inset-top) + 14px) 16px 16px;display:flex;flex-direction:column;gap:14px}
+.top{display:flex;align-items:center;justify-content:space-between;gap:10px}
+h1{font-size:22px;margin:0;letter-spacing:-.3px}
+h2{font-size:13px;margin:8px 0 0;color:var(--mut);text-transform:uppercase;letter-spacing:.8px;font-weight:600}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px}
+.chip{background:var(--card2);border:1px solid var(--line);border-radius:999px;padding:5px 12px;font-size:13px;font-weight:600}
+.btn{display:block;width:100%;min-height:56px;border-radius:16px;background:var(--card2);border:1px solid var(--line);font-weight:600;font-size:16px;padding:0 16px}
+.btn.primary{background:var(--acc);border-color:var(--acc);color:#fff}
+.btn.danger{color:var(--rec)}
+.btn:active,.scn button:active,.pill:active{transform:scale(.98);opacity:.85}
+.link{color:var(--mut);text-decoration:underline;font-size:14px;padding:12px;width:100%}
+.pill{background:var(--card2);border:1px solid var(--line);border-radius:999px;padding:10px 14px;font-size:13px;font-weight:600;min-height:44px}
+.pill.on{border-color:var(--ok);color:var(--ok)}
+.banner{background:#2a2110;border:1px solid #5a4418;color:var(--warn);border-radius:14px;padding:12px 14px;font-size:14px}
+.statrow{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px;text-align:center}
+.stat b{display:block;font-size:20px}
+.stat span{font-size:11px;color:var(--mut)}
+.scn{display:grid;gap:10px}
+.scn button{display:flex;align-items:center;gap:14px;text-align:left;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px 16px;min-height:72px;width:100%}
+.scn .ic{font-size:26px;width:36px;text-align:center}
+.scn b{display:block;font-size:16px}
+.scn small{color:var(--mut);font-size:13px}
+.scn button.locked{opacity:.45}
+/* talk */
+#v-talk{padding-bottom:calc(env(safe-area-inset-bottom) + 18px)}
+#tTitle{text-align:center;font-size:13px;color:var(--mut)}
+#tTime{text-align:center;font-weight:700;font-variant-numeric:tabular-nums}
+#aiText{flex:1;min-height:60px;overflow-y:auto;font-size:20px;line-height:1.4;display:flex;align-items:center;justify-content:center;text-align:center;padding:4px 6px;color:#cfd8ea}
+.corr{padding:12px 14px;font-size:14px;display:grid;gap:8px}
+.corr .lbl{font-size:11px;color:var(--mut);text-transform:uppercase;letter-spacing:.6px}
+.corr .said{color:#aeb8cc}
+.corr .better{color:var(--ok);font-weight:600}
+.corr .why{color:var(--mut);font-size:13px}
+.corr.good .better{font-weight:500}
+.orbwrap{display:flex;flex-direction:column;align-items:center;gap:10px}
+#live{min-height:22px;font-size:14px;color:var(--mut);text-align:center;max-height:44px;overflow:hidden}
+#status{font-size:14px;color:var(--mut);font-weight:600}
+.orb{position:relative;width:168px;height:168px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#7da4ff,#3b63d8 70%);display:grid;place-items:center;box-shadow:0 10px 40px #3b63d855;transition:background .25s,transform .15s}
+.orb svg{width:60px;height:60px;fill:#fff}
+.orb::before,.orb::after{content:"";position:absolute;inset:0;border-radius:50%;border:2px solid currentColor;opacity:0;color:var(--acc);pointer-events:none}
+.orb:active{transform:scale(.96)}
+.orb[data-state=listening]{background:radial-gradient(circle at 35% 30%,#ff8fa5,#e03a5c 70%);box-shadow:0 10px 40px #e03a5c66}
+.orb[data-state=listening]::before,.orb[data-state=listening]::after{color:var(--rec);animation:ring 1.4s ease-out infinite}
+.orb[data-state=listening]::after{animation-delay:.7s}
+.orb[data-state=speaking]{background:radial-gradient(circle at 35% 30%,#7ff0c0,#1fa871 70%);box-shadow:0 10px 40px #1fa87155;animation:breathe 1s ease-in-out infinite}
+.orb[data-state=thinking]{background:var(--card2);box-shadow:none}
+.orb[data-state=thinking]::before{opacity:1;border-color:var(--acc) transparent transparent transparent;border-width:4px;animation:spin .9s linear infinite}
+@keyframes ring{0%{transform:scale(1);opacity:.7}100%{transform:scale(1.6);opacity:0}}
+@keyframes breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+/* progress */
+.lvl{display:flex;align-items:center;gap:16px}
+.lvl .big{font-size:46px;font-weight:800;letter-spacing:-1px;color:var(--acc)}
+.bar{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;margin-top:10px}
+.bar i{height:8px;border-radius:4px;background:var(--line)}
+.bar i.on{background:var(--acc)}
+.bar small{font-size:10px;color:var(--mut);text-align:center}
+.err{display:grid;gap:4px;padding:12px 0;border-top:1px solid var(--line)}
+.err:first-child{border-top:0;padding-top:0}
+.err .h{display:flex;justify-content:space-between;gap:8px;font-weight:600}
+.err .n{color:var(--warn);white-space:nowrap}
+.err .ex{font-size:13px;color:var(--mut)}
+.err .ex b{color:var(--ok);font-weight:500}
+.tags{display:flex;flex-wrap:wrap;gap:6px}
+.tags span{background:var(--card2);border:1px solid var(--line);border-radius:999px;padding:4px 10px;font-size:13px}
+.mut{color:var(--mut);font-size:14px}
+/* settings */
+.field{display:grid;gap:6px;margin-bottom:14px}
+.field:last-child{margin-bottom:0}
+.field label{font-size:13px;color:var(--mut)}
+.field input,.field select{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:0 12px;height:48px;width:100%}
+.row{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:48px}
+.row span small{display:block;color:var(--mut);font-size:12px}
+.sw{appearance:none;width:52px;height:32px;border-radius:16px;background:var(--line);position:relative;flex:none;transition:.2s;border:0}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:26px;height:26px;border-radius:50%;background:#fff;transition:.2s}
+.sw:checked{background:var(--acc)}
+.sw:checked::after{left:23px}
+/* nav */
+#nav{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--line);background:#0d121c;padding-bottom:env(safe-area-inset-bottom)}
+#nav button{padding:10px 0 12px;font-size:12px;color:var(--mut);display:grid;gap:2px;justify-items:center}
+#nav button span{font-size:20px}
+#nav button.on{color:var(--tx)}
+#toast{position:fixed;left:50%;bottom:110px;transform:translateX(-50%);background:#22293a;border:1px solid var(--line);padding:10px 16px;border-radius:12px;font-size:14px;max-width:88vw;text-align:center;z-index:9;opacity:0;pointer-events:none;transition:opacity .2s}
+#toast.show{opacity:1}
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- HOME -->
+<section id="v-home" class="view">
+  <header class="top"><h1>Speak Coach</h1><span id="lvlChip" class="chip"></span></header>
+  <div id="keyBanner" class="banner" hidden>Ajoute ta clé API (Gemini gratuite ou OpenAI) dans <b>Réglages</b> pour activer la conversation.</div>
+  <div id="assessCta" class="card" hidden>
+    <b style="font-size:18px">Commençons par ton niveau</b>
+    <p class="mut">Une conversation orale de 3 à 5 minutes, des questions simples puis plus complexes. À la fin : ton niveau CECRL et tes points à travailler.</p>
+    <button id="btnAssess" class="btn primary">🎙️ Démarrer le test oral</button>
+    <button id="btnSkip" class="link">Passer et démarrer au niveau B1</button>
+  </div>
+  <div id="homeStats" class="statrow"></div>
+  <h2>Scénario</h2>
+  <div id="scenarios" class="scn"></div>
+</section>
+
+<!-- TALK -->
+<section id="v-talk" class="view" hidden>
+  <header class="top">
+    <button id="btnEnd" class="pill">✕ Terminer</button>
+    <div><div id="tTitle"></div><div id="tTime">0:00</div></div>
+    <button id="btnMode" class="pill"></button>
+  </header>
+  <div id="aiText"></div>
+  <div id="corr" class="card corr" hidden></div>
+  <div class="orbwrap">
+    <div id="live"></div>
+    <button id="orb" class="orb" data-state="idle" aria-label="Parler">
+      <svg viewBox="0 0 24 24"><path d="M12 15a3.5 3.5 0 0 0 3.5-3.5v-6a3.5 3.5 0 0 0-7 0v6A3.5 3.5 0 0 0 12 15Zm6-3.5a1 1 0 1 0-2 0 4 4 0 0 1-8 0 1 1 0 1 0-2 0 6 6 0 0 0 5 5.9V20H8.5a1 1 0 1 0 0 2h7a1 1 0 1 0 0-2H13v-2.6a6 6 0 0 0 5-5.9Z"/></svg>
+    </button>
+    <div id="status"></div>
+  </div>
+</section>
+
+<!-- END -->
+<section id="v-end" class="view" hidden>
+  <header class="top"><h1 id="endTitle">Session terminée</h1></header>
+  <div id="endBody" style="display:grid;gap:14px"></div>
+  <button id="btnHome" class="btn primary">Continuer</button>
+</section>
+
+<!-- PROGRESS -->
+<section id="v-progress" class="view" hidden>
+  <header class="top"><h1>Progression</h1></header>
+  <div id="progBody" style="display:grid;gap:14px"></div>
+</section>
+
+<!-- SETTINGS -->
+<section id="v-settings" class="view" hidden>
+  <header class="top"><h1>Réglages</h1></header>
+  <h2>Moteur de conversation (IA)</h2>
+  <div class="card">
+    <div class="field"><label>Fournisseur</label>
+      <select data-k="provider"><option value="gemini">Google Gemini (clé gratuite)</option><option value="openai">OpenAI</option></select></div>
+    <div class="field"><label>Clé API Gemini</label><input data-k="geminiKey" type="password" autocomplete="off" placeholder="AIza…"></div>
+    <div class="field"><label>Modèle Gemini</label><input data-k="geminiModel" autocapitalize="off" spellcheck="false"></div>
+    <div class="field"><label>Clé API OpenAI</label><input data-k="openaiKey" type="password" autocomplete="off" placeholder="sk-…"></div>
+    <div class="field"><label>Modèle OpenAI</label><input data-k="openaiModel" autocapitalize="off" spellcheck="false"></div>
+    <p class="mut" style="margin:0">Les clés restent uniquement sur ce téléphone (localStorage) et ne sont envoyées qu'au fournisseur choisi.</p>
+  </div>
+  <h2>Voix</h2>
+  <div class="card">
+    <div class="field"><label>Accent</label>
+      <select data-k="accent"><option value="en-US">Américain</option><option value="en-GB">Britannique</option></select></div>
+    <div class="field"><label>Ma voix → texte</label>
+      <select data-k="sttEngine"><option value="browser">Navigateur (gratuit)</option><option value="whisper">Whisper (clé OpenAI)</option></select></div>
+    <div class="field"><label>Voix de l'IA</label>
+      <select data-k="ttsEngine"><option value="gemini">Gemini (voix naturelle, clé Gemini)</option><option value="browser">Navigateur (hors ligne, gratuit)</option><option value="openai">OpenAI TTS (clé OpenAI)</option></select></div>
+    <div class="field"><label>Voix Gemini</label>
+      <select data-k="geminiVoice"><option value="Kore">Kore (femme, posée)</option><option value="Aoede">Aoede (femme, légère)</option><option value="Leda">Leda (femme, jeune)</option><option value="Puck">Puck (homme, enjoué)</option><option value="Charon">Charon (homme, grave)</option><option value="Orus">Orus (homme, ferme)</option></select></div>
+    <div class="field"><label>Modèle voix Gemini</label><input data-k="geminiTtsModel" autocapitalize="off" spellcheck="false"></div>
+    <div class="field"><label>Voix du navigateur</label><select data-k="voiceURI" id="voiceSel"></select></div>
+    <div class="field"><label>Voix OpenAI</label>
+      <select data-k="openaiVoice"><option>alloy</option><option>nova</option><option>shimmer</option><option>echo</option><option>onyx</option><option>fable</option></select></div>
+    <button id="btnTestVoice" class="btn">▶ Tester la voix</button>
+    <p class="mut" style="margin:10px 0 0">Si la voix lit l'anglais « à la française » : choisis une voix anglaise dans la liste ci-dessus. Si la liste est vide, installe l'anglais dans Paramètres Android → Synthèse vocale → Installer les données vocales.</p>
+  </div>
+  <h2>Conversation</h2>
+  <div class="card">
+    <label class="row"><span>Mains libres<small>Écoute automatique après chaque réponse de l'IA</small></span><input class="sw" type="checkbox" data-k="handsFree"></label>
+    <label class="row"><span>Correction orale rapide<small>Uniquement en cas d'erreur bloquante, avant la réponse</small></span><input class="sw" type="checkbox" data-k="quickCorrection"></label>
+    <label class="row"><span>Afficher le texte de l'IA<small>Désactive pour entraîner l'écoute pure</small></span><input class="sw" type="checkbox" data-k="showText"></label>
+    <div class="field" style="margin-top:10px"><label>Langue des explications</label>
+      <select data-k="explainLang"><option value="en">Anglais simple</option><option value="fr">Français</option></select></div>
+  </div>
+  <h2>Données</h2>
+  <div class="card" style="display:grid;gap:10px">
+    <button id="btnExport" class="btn">Exporter mes données (JSON)</button>
+    <button id="btnReset" class="btn danger">Tout effacer</button>
+  </div>
+</section>
+
+<nav id="nav">
+  <button data-go="home" class="on"><span>🎙️</span>Parler</button>
+  <button data-go="progress"><span>📈</span>Progression</button>
+  <button data-go="settings"><span>⚙️</span>Réglages</button>
+</nav>
+</div>
+<div id="toast"></div>
+
+<script>
+'use strict';
+/* ---------- State ---------- */
+const LS = 'speakcoach.v1';
+const LEVELS = ['A1','A2','B1','B2','C1','C2'];
+const DEF = {
+  settings:{provider:'gemini',geminiKey:'',openaiKey:'',geminiModel:'gemini-flash-latest',openaiModel:'gpt-4o-mini',
+    sttEngine:'browser',ttsEngine:'gemini',geminiTtsModel:'gemini-3.8-flash-lite-tts',geminiVoice:'Kore',voiceURI:'',openaiVoice:'nova',accent:'en-US',
+    handsFree:false,quickCorrection:false,showText:true,explainLang:'en'},
+  profile:null, stats:{speakMs:0,sessions:0}, errors:{}, vocab:[], sessions:[]
+};
+let S = load();
+function load(){
+  let r = {}; try{ r = JSON.parse(localStorage.getItem(LS)) || {}; }catch{}
+  const d = JSON.parse(JSON.stringify(DEF));
+  return {...d, ...r, settings:{...d.settings, ...(r.settings||{})}, stats:{...d.stats, ...(r.stats||{})}};
+}
+function save(){ try{ localStorage.setItem(LS, JSON.stringify(S)); }catch{} }
+
+const $ = s => document.querySelector(s);
+const el = (tag, cls, text) => { const e = document.createElement(tag); if(cls) e.className = cls; if(text != null) e.textContent = text; return e; };
+let toastT; function toast(m){ const t = $('#toast'); t.textContent = m; t.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(()=>t.classList.remove('show'), 3500); }
+const fmtDur = ms => { const m = Math.round(ms/60000); return m < 60 ? m+' min' : Math.floor(m/60)+' h '+String(m%60).padStart(2,'0'); };
+const fmtClock = ms => { const s = Math.floor(ms/1000); return Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); };
+const level = () => S.profile ? S.profile.level : 'B1';
+const apiKey = () => S.settings.provider === 'openai' ? S.settings.openaiKey : S.settings.geminiKey;
+function topErrors(n){ return Object.values(S.errors).sort((a,b)=> b.count-a.count || b.last-a.last).slice(0,n); }
+
+/* ---------- Scenarios ---------- */
+const SCN = [
+  {id:'free', ic:'💬', name:'Discussion libre', sub:'Free talk', brief:'Free talk. Chat like a friendly acquaintance. Follow the learner\'s interests and dig deeper into whatever they bring up.'},
+  {id:'interview', ic:'💼', name:'Entretien / Management', sub:'Job interview', brief:'Job interview role-play. You are a hiring manager interviewing the learner for a management position. Start by asking which role they are applying for, then ask about experience, leadership style, handling conflict, and behavioural questions ("Tell me about a time when..."). Stay in character.'},
+  {id:'meeting', ic:'📊', name:'Réunion professionnelle', sub:'Business meeting', brief:'Business meeting role-play. You are a colleague running a project meeting. Open by stating a plausible agenda (a delay, a budget issue, priorities). Ask the learner for updates and opinions, push back politely, ask them to propose solutions and next steps.'},
+  {id:'travel', ic:'✈️', name:'Vie quotidienne / Voyage', sub:'Daily life & travel', brief:'Real-life situation role-play (hotel check-in, restaurant, airport problem, doctor, renting a car, small talk with a neighbour). Pick one, set the scene in one short sentence, then play the other person. Add a small complication the learner must solve. Move to a new situation after about six exchanges.'},
+  {id:'debate', ic:'⚖️', name:'Débat d\'idées', sub:'Debate', brief:'Friendly debate. Offer two debatable topics and let the learner pick. Then take the opposite side respectfully, challenge them with counter-arguments and ask them to justify, give examples and concede or rebut.'}
+];
+const ASSESS = {id:'assessment', name:'Test de niveau'};
+const ASSESS_TURNS = 8, ASSESS_MAX_MS = 4.5*60000;
+
+const STYLE = {
+  A1:'Use very short, simple sentences in the present tense and only the most common everyday words. Ask simple, concrete questions.',
+  A2:'Use simple sentences and everyday vocabulary, with basic past and future forms. Ask concrete questions about familiar topics.',
+  B1:'Use clear everyday English with common connectors and a few frequent phrasal verbs. Ask for descriptions, experiences and reasons.',
+  B2:'Use natural, fluent English with occasional idioms. Bring in more abstract angles and ask the learner to justify and compare.',
+  C1:'Use fully natural, idiomatic, nuanced English. Challenge the learner\'s reasoning and ask for precision and nuance.',
+  C2:'Use sophisticated, subtle English with rarer idioms and humour. Debate at a native level and probe fine distinctions.'
+};
+
+/* ---------- Adaptive system prompt ---------- */
+function systemPrompt(sc, closing){
+  const expl = S.settings.explainLang === 'fr' ? 'French' : 'very simple English';
+  if(sc.id === 'assessment'){
+    return `You are Alex, a friendly examiner running a 3 to 5 minute ORAL placement interview in a voice-only app. Your "reply" is read aloud by text-to-speech: spoken English only, no markdown, no lists, no emojis.
+Ask exactly ONE question per turn, in at most two short sentences, after a brief natural reaction to the previous answer.
+Difficulty must rise with the learner's turn number (the learner has answered ${ses ? ses.turns : 0} of ${ASSESS_TURNS} turns):
+- answers 1-2: warm-up (name, where they live, job or studies)
+- answers 3-4: background and past experience, describing something in detail
+- answers 5-6: future projects, opinions with reasons
+- answers 7-8: a hypothetical situation or abstract trade-off ("What would you do if...", "Some people say... what do you think?")
+If the answers are very limited, stay simpler; if they are strong, push harder. Never correct the learner.
+${closing ? 'THIS IS THE FINAL TURN: thank the learner warmly, say their result is being prepared, and do NOT ask a question.' : ''}
+Output strict JSON only: {"reply":"...","correction":null,"vocab":[]}`;
+  }
+  const p = S.profile || {}, lvl = level(), n = S.stats.sessions + 1;
+  const errs = topErrors(5), tags = Object.keys(S.errors).slice(0,40);
+  const vocab = S.vocab.slice(-12).map(v=>v.word);
+  return `You are Alex, a warm, natural English conversation partner in a voice-only speaking practice app. Your "reply" is read aloud by text-to-speech: write spoken English only, no markdown, no lists, no emojis, no stage directions.
+
+LEARNER PROFILE
+- CEFR speaking level: ${lvl}. This is session number ${n}.
+- Weak points: ${(p.weaknesses||[]).join('; ') || 'not known yet'}
+- Recurring mistakes: ${errs.map(e=>`${e.tag} (x${e.count})`).join('; ') || 'none recorded yet'}
+- Vocabulary learned recently: ${vocab.join(', ') || 'none yet'}
+
+HOW TO TALK
+- ${STYLE[lvl]}
+- Aim slightly above the learner's level, and a little more so as the session number grows: richer vocabulary and more natural phrasing over time, never overwhelming.
+- First react genuinely to what they just said. Then ask exactly ONE open-ended question (why, how, tell me more, an example, an opinion) that pushes them to develop their ideas. Avoid yes/no questions.
+- Keep each reply to 1-3 sentences so the learner does most of the talking.
+- Be encouraging. Never correct or lecture inside "reply"; corrections go in the separate field.
+- Subtly recycle: shape your questions so the learner naturally has to use the structures listed under "Recurring mistakes", and model those structures correctly in your own sentences. Reuse one item of the learned vocabulary when it fits naturally.
+
+SCENARIO
+${sc.brief}
+
+SILENT CORRECTION (shown on screen, not spoken)
+The learner's messages are raw speech-to-text: ignore punctuation, capitalisation and probable mis-transcriptions or homophones. Judge only grammar, word choice and naturalness of the learner's LAST message.
+- If it was already correct and natural: "correction": null.
+- Otherwise: "correction": {"better": the full sentence as a native speaker would naturally say it, keeping their meaning, "explanation": at most 15 words in ${expl}, "tag": a short reusable label for the error type${tags.length ? ' (reuse one of these when it fits: '+tags.join(' | ')+')' : ''}, "category": "grammar" | "vocabulary" | "fluency", "severity": "major" only if the error blocks understanding or is a serious grammar mistake, otherwise "minor"}.
+"vocab": zero or one item, a useful word or expression from YOUR reply that is slightly above their level: {"word":"...","meaning":"at most 8 words, simple English"}.
+
+Output strict JSON only: {"reply":"...","correction":null or {...},"vocab":[...]}`;
+}
+
+/* ---------- LLM ---------- */
+function parseJSON(t){
+  t = String(t||'').replace(/```json|```/g,'').trim();
+  const a = t.indexOf('{'), b = t.lastIndexOf('}');
+  if(a < 0 || b < 0) throw new Error('Réponse IA illisible, réessaie.');
+  return JSON.parse(t.slice(a, b+1));
+}
+async function callLLM(system, msgs, temperature = 0.8){
+  const st = S.settings;
+  if(!apiKey()) throw new Error('Clé API manquante (Réglages).');
+  let res, data;
+  if(st.provider === 'openai'){
+    res = await fetch('https://api.openai.com/v1/chat/completions', {method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+st.openaiKey},
+      body:JSON.stringify({model:st.openaiModel, temperature, response_format:{type:'json_object'},
+        messages:[{role:'system',content:system}, ...msgs.map(m=>({role:m.role, content:m.text}))]})});
+    data = await res.json().catch(()=>({}));
+    if(!res.ok) throw new Error('OpenAI : '+(data.error?.message || res.status));
+    return parseJSON(data.choices?.[0]?.message?.content);
+  }
+  res = await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(st.geminiModel)+':generateContent', {method:'POST',
+    headers:{'Content-Type':'application/json','x-goog-api-key':st.geminiKey},
+    body:JSON.stringify({systemInstruction:{parts:[{text:system}]},
+      contents:msgs.map(m=>({role:m.role === 'assistant' ? 'model' : 'user', parts:[{text:m.text}]})),
+      generationConfig:{temperature, responseMimeType:'application/json'}})});
+  data = await res.json().catch(()=>({}));
+  if(!res.ok) throw new Error('Gemini : '+(data.error?.message || res.status));
+  const txt = (data.candidates?.[0]?.content?.parts||[]).map(p=>p.text||'').join('');
+  if(!txt) throw new Error('Gemini n\'a rien renvoyé, réessaie.');
+  return parseJSON(txt);
+}
+function recentMsgs(){
+  let m = ses.msgs.slice(-20);
+  while(m.length && m[0].role !== 'user') m.shift();
+  return m;
+}
+const transcript = () => ses.msgs.filter(m=>!m.hidden).map(m=>(m.role === 'user' ? 'LEARNER: ' : 'ALEX: ')+m.text).join('\n');
+
+/* ---------- Text-to-speech ---------- */
+let voices = [], speakId = 0, speakResolve = null, warnedVoice = false;
+const player = new Audio();
+function loadVoices(){
+  if(!('speechSynthesis' in window)) return;
+  voices = speechSynthesis.getVoices().filter(v=>/^en[-_]/i.test(v.lang));
+  const sel = $('#voiceSel'); sel.innerHTML = '';
+  sel.append(new Option('Automatique (meilleure voix)', ''));
+  voices.forEach(v=>sel.append(new Option(v.name+' ('+v.lang+')', v.voiceURI)));
+  sel.value = S.settings.voiceURI; if(sel.value !== S.settings.voiceURI) sel.value = '';
+}
+function pickVoice(){
+  if(!voices.length) return null;
+  const chosen = voices.find(v=>v.voiceURI === S.settings.voiceURI); if(chosen) return chosen;
+  const acc = S.settings.accent.toLowerCase();
+  const score = v => (v.lang.replace('_','-').toLowerCase() === acc ? 4 : 0) + (/natural|neural|enhanced|premium|online/i.test(v.name) ? 3 : 0) + (/google/i.test(v.name) ? 2 : 0) + (/samantha|daniel|karen|aria|jenny/i.test(v.name) ? 1 : 0);
+  return voices.slice().sort((a,b)=>score(b)-score(a))[0];
+}
+function speechRate(){
+  const base = [0.8,0.86,0.92,0.97,1.0,1.04][LEVELS.indexOf(level())] || 0.92;
+  return Math.min(1.08, base + Math.min(S.stats.sessions, 20) * 0.004); // drifts toward natural speed over sessions
+}
+function stopSpeaking(){
+  speakId++;
+  try{ speechSynthesis.cancel(); }catch{}
+  try{ player.pause(); }catch{}
+  if(speakResolve){ const r = speakResolve; speakResolve = null; r(false); }
+}
+/* resolves true if playback finished, false if interrupted */
+function speak(text){
+  stopSpeaking();
+  const id = ++speakId; setState('speaking');
+  return new Promise(async resolve => {
+    speakResolve = resolve;
+    const done = () => { if(id === speakId){ speakResolve = null; resolve(true); } };
+    const eng = S.settings.ttsEngine;
+    if((eng === 'openai' && S.settings.openaiKey) || (eng === 'gemini' && S.settings.geminiKey)){
+      try{ await (eng === 'openai' ? openaiTTS : geminiTTS)(text, id); return done(); }
+      catch(e){ console.warn(e); if(id === speakId) toast('Voix IA indisponible ('+e.message+'), voix du navigateur utilisée.'); }
+    }
+    if(id !== speakId) return;
+    if(!('speechSynthesis' in window)) return done();
+    const parts = (text.match(/[^.!?]+[.!?]+["')\]]*|[^.!?]+$/g) || [text]).map(s=>s.trim()).filter(Boolean);
+    let i = 0;
+    const next = () => {
+      if(id !== speakId) return;
+      if(i >= parts.length) return done();
+      const u = new SpeechSynthesisUtterance(parts[i++]);
+      // Always force a valid English language tag: Android reports "en_US" (underscore), which the
+      // engine rejects and then falls back to the phone's default (French) voice reading English.
+      const v = pickVoice(); if(v) u.voice = v;
+      u.lang = v ? v.lang.replace('_','-') : S.settings.accent;
+      if(!v && !warnedVoice){ warnedVoice = true; toast('Aucune voix anglaise trouvée sur ce téléphone : installe-la (voir Réglages).'); }
+      u.rate = speechRate(); u.onend = next; u.onerror = next;
+      speechSynthesis.speak(u);
+    };
+    next();
+  });
+}
+async function openaiTTS(text, id){
+  const res = await fetch('https://api.openai.com/v1/audio/speech', {method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+S.settings.openaiKey},
+    body:JSON.stringify({model:'gpt-4o-mini-tts', voice:S.settings.openaiVoice, input:text, response_format:'mp3', speed:Math.max(0.85, speechRate())})});
+  if(!res.ok) throw new Error('TTS '+res.status);
+  await playBlob(await res.blob(), id);
+}
+async function playBlob(blob, id){
+  const url = URL.createObjectURL(blob);
+  if(id !== speakId) return;
+  player.src = url;
+  await player.play();
+  await new Promise(r => { player.onended = r; player.onerror = r; });
+  URL.revokeObjectURL(url);
+}
+/* Gemini native audio voice. Returns either a WAV file or raw 16-bit PCM depending on the model. */
+async function geminiTTS(text, id){
+  const st = S.settings, lvl = LEVELS.indexOf(level());
+  const pace = lvl <= 1 ? 'slowly and very clearly' : lvl === 2 ? 'at a relaxed but natural pace' : 'at a natural conversational pace';
+  const style = `Say this ${pace}, in a warm, friendly ${st.accent === 'en-GB' ? 'British' : 'American'} voice: `;
+  const res = await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(st.geminiTtsModel)+':generateContent', {method:'POST',
+    headers:{'Content-Type':'application/json','x-goog-api-key':st.geminiKey},
+    body:JSON.stringify({contents:[{parts:[{text:style+text}]}],
+      generationConfig:{responseModalities:['AUDIO'], speechConfig:{voiceConfig:{prebuiltVoiceConfig:{voiceName:st.geminiVoice}}}}})});
+  const data = await res.json().catch(()=>({}));
+  if(!res.ok) throw new Error(res.status === 429 ? 'quota gratuit atteint' : (data.error?.message || res.status));
+  const part = (data.candidates?.[0]?.content?.parts||[]).find(p=>p.inlineData);
+  if(!part) throw new Error('pas d\'audio');
+  const bin = atob(part.inlineData.data), bytes = new Uint8Array(bin.length);
+  for(let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  const mime = part.inlineData.mimeType || '';
+  let blob;
+  if(/wav/i.test(mime)) blob = new Blob([bytes], {type:'audio/wav'});
+  else{ // raw PCM: prepend a WAV header so the audio element can play it
+    const rate = +(mime.match(/rate=(\d+)/)||[])[1] || 24000, h = new DataView(new ArrayBuffer(44));
+    const w = (o,s) => [...s].forEach((c,i)=>h.setUint8(o+i, c.charCodeAt(0)));
+    w(0,'RIFF'); h.setUint32(4, 36+bytes.length, true); w(8,'WAVEfmt '); h.setUint32(16,16,true); h.setUint16(20,1,true); h.setUint16(22,1,true);
+    h.setUint32(24,rate,true); h.setUint32(28,rate*2,true); h.setUint16(32,2,true); h.setUint16(34,16,true); w(36,'data'); h.setUint32(40,bytes.length,true);
+    blob = new Blob([h, bytes], {type:'audio/wav'});
+  }
+  await playBlob(blob, id);
+}
+
+/* ---------- Speech-to-text ---------- */
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+let rec = null, wantListen = false, pendingFinish = false, finalText = '', chunk = '', interim = '', speechStart = 0, noSpeech = 0, finishT;
+let mrec = null, mstream = null;
+const useWhisper = () => !!S.settings.openaiKey && (S.settings.sttEngine === 'whisper' || !SR);
+const handsFree = () => S.settings.handsFree && !useWhisper();
+
+function startListening(){
+  if(!SR && !useWhisper()){ toast('Reconnaissance vocale non disponible ici. Utilise Chrome, ou active Whisper dans Réglages.'); return; }
+  stopSpeaking(); killRec();
+  finalText = chunk = interim = ''; speechStart = 0; noSpeech = 0; wantListen = true; pendingFinish = false;
+  $('#live').textContent = ''; setState('listening');
+  if(useWhisper()) startRecorder(); else spawnRec();
+}
+function spawnRec(){
+  rec = new SR(); rec.lang = S.settings.accent; rec.interimResults = true; rec.continuous = false; rec.maxAlternatives = 1;
+  rec.onresult = e => {
+    if(!speechStart) speechStart = Date.now();
+    let f = '', i = '';
+    for(const r of e.results){ if(r.isFinal) f += r[0].transcript + ' '; else i += r[0].transcript; }
+    chunk = f; interim = i;
+    $('#live').textContent = (finalText+' '+chunk+interim).trim().slice(-140);
+  };
+  rec.onerror = e => {
+    if(e.error === 'not-allowed' || e.error === 'service-not-allowed'){ wantListen = false; pendingFinish = false; toast('Micro refusé. Autorise le micro pour ce site.'); setState('idle'); }
+  };
+  rec.onend = () => {
+    finalText = (finalText+' '+chunk+interim).trim(); chunk = interim = '';
+    if(!wantListen){ if(pendingFinish) finishListen(); return; }
+    if(handsFree()){
+      if(finalText) return finishListen();
+      if(++noSpeech < 4) return spawnRec();
+      wantListen = false; setState('idle'); return;
+    }
+    spawnRec(); // tap mode: keep listening through pauses until the user taps again
+  };
+  try{ rec.start(); }catch(e){ console.warn(e); }
+}
+function stopListening(){
+  wantListen = false;
+  if(mrec && mrec.state === 'recording'){ mrec.stop(); return; }
+  pendingFinish = true;
+  try{ rec && rec.stop(); }catch{}
+  clearTimeout(finishT); finishT = setTimeout(()=>{ if(pendingFinish) finishListen(); }, 1200);
+}
+function killRec(){
+  clearTimeout(finishT); wantListen = false; pendingFinish = false;
+  if(rec){ rec.onend = rec.onresult = rec.onerror = null; try{ rec.abort(); }catch{} rec = null; }
+  if(mrec){ mrec.onstop = null; try{ mrec.state === 'recording' && mrec.stop(); }catch{} mrec = null; }
+  if(mstream){ mstream.getTracks().forEach(t=>t.stop()); mstream = null; }
+}
+function finishListen(){
+  const text = (finalText+' '+chunk+interim).trim();
+  const dur = speechStart ? Date.now() - speechStart : 0;
+  killRec();
+  if(!text){ toast('Je n\'ai rien entendu. Réessaie.'); setState('idle'); return; }
+  userTurn(text, dur);
+}
+async function startRecorder(){
+  try{ mstream = await navigator.mediaDevices.getUserMedia({audio:true}); }
+  catch{ wantListen = false; toast('Micro refusé. Autorise le micro pour ce site.'); setState('idle'); return; }
+  if(!wantListen){ mstream.getTracks().forEach(t=>t.stop()); mstream = null; return; }
+  const chunks = [], t0 = Date.now(), my = ses;
+  mrec = new MediaRecorder(mstream);
+  mrec.ondataavailable = e => e.data.size && chunks.push(e.data);
+  mrec.onstop = async () => {
+    const type = mrec.mimeType || 'audio/webm'; const dur = Date.now() - t0;
+    mstream.getTracks().forEach(t=>t.stop()); mstream = null; mrec = null;
+    setState('thinking');
+    try{
+      const fd = new FormData();
+      fd.append('file', new Blob(chunks, {type}), 'speech.'+(type.includes('mp4') ? 'mp4' : type.includes('ogg') ? 'ogg' : 'webm'));
+      fd.append('model', 'whisper-1'); fd.append('language', 'en');
+      const res = await fetch('https://api.openai.com/v1/audio/transcriptions', {method:'POST', headers:{'Authorization':'Bearer '+S.settings.openaiKey}, body:fd});
+      const data = await res.json().catch(()=>({}));
+      if(!res.ok) throw new Error('Whisper : '+(data.error?.message || res.status));
+      if(ses !== my) return;
+      const text = (data.text||'').trim();
+      if(!text){ toast('Je n\'ai rien entendu. Réessaie.'); setState('idle'); return; }
+      userTurn(text, dur);
+    }catch(e){ if(ses === my){ toast(e.message); setState('idle'); } }
+  };
+  mrec.start();
+}
+
+/* ---------- Session ---------- */
+let ses = null, state = 'idle', tick = null, wake = null;
+const STATUS = {idle:'Appuie pour parler', listening:'Je t\'écoute… appuie pour envoyer', thinking:'Réflexion…', speaking:'Appuie pour interrompre'};
+function setState(s){
+  state = s; $('#orb').dataset.state = s;
+  $('#status').textContent = s === 'listening' && handsFree() ? 'Je t\'écoute…' : STATUS[s];
+}
+function renderMode(){ const b = $('#btnMode'); b.textContent = handsFree() ? 'Mains libres' : 'Push-to-talk'; b.classList.toggle('on', handsFree()); }
+
+async function startSession(sc){
+  if(!apiKey()){ toast('Ajoute d\'abord ta clé API.'); return show('settings'); }
+  ses = {scenario:sc, msgs:[{role:'user', hidden:true, text:'[The session starts now. Greet me briefly and open the conversation.]'}], startedAt:Date.now(), speakMs:0, turns:0, corrections:[]};
+  const my = ses;
+  $('#tTitle').textContent = sc.name; $('#tTime').textContent = '0:00';
+  $('#aiText').textContent = ''; $('#corr').hidden = true; $('#live').textContent = '';
+  renderMode(); show('talk'); setState('thinking');
+  clearInterval(tick); tick = setInterval(()=>{ if(ses) $('#tTime').textContent = fmtClock(Date.now() - ses.startedAt); }, 1000);
+  try{ wake = await navigator.wakeLock?.request('screen'); }catch{}
+  // unlock audio output inside the user gesture (mobile autoplay rules)
+  try{ const u0 = new SpeechSynthesisUtterance(' '); u0.lang = S.settings.accent; speechSynthesis.speak(u0); }catch{}
+  try{ player.src = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YQAAAAA='; player.play().catch(()=>{}); }catch{}
+  try{
+    const out = await callLLM(systemPrompt(sc, false), recentMsgs());
+    if(ses !== my) return;
+    ses.msgs.push({role:'assistant', text:out.reply});
+    showReply(out.reply);
+    const ok = await speak(out.reply);
+    if(ses !== my || !ok) return;
+    handsFree() ? startListening() : setState('idle');
+  }catch(e){ if(ses === my){ toast(e.message); ses = null; cleanupSession(); show('home'); } }
+}
+function showReply(t){ $('#aiText').textContent = S.settings.showText ? t : '🔊'; }
+
+async function userTurn(text, dur){
+  const my = ses; if(!my) return;
+  ses.speakMs += dur; ses.turns++; S.stats.speakMs += dur; save();
+  ses.msgs.push({role:'user', text});
+  $('#live').textContent = ''; setState('thinking');
+  const sc = ses.scenario;
+  const closing = sc.id === 'assessment' && (ses.turns >= ASSESS_TURNS || Date.now() - ses.startedAt >= ASSESS_MAX_MS);
+  try{
+    const out = await callLLM(systemPrompt(sc, closing), recentMsgs());
+    if(ses !== my) return;
+    ses.msgs.push({role:'assistant', text:out.reply});
+    const c = sc.id !== 'assessment' && out.correction && out.correction.better ? out.correction : null;
+    if(sc.id !== 'assessment'){ showCorrection(text, c); if(c) recordError(text, c); addVocab(out.vocab); save(); }
+    showReply(out.reply);
+    let spoken = out.reply;
+    if(c && c.severity === 'major' && S.settings.quickCorrection) spoken = 'Quick tip. A more natural way to say that is: '+c.better+' ... '+out.reply;
+    const ok = await speak(spoken);
+    if(ses !== my) return;
+    if(closing) return endSession();
+    if(!ok) return;
+    handsFree() ? startListening() : setState('idle');
+  }catch(e){
+    if(ses !== my) return;
+    ses.msgs.pop(); ses.turns--; toast(e.message); setState('idle');
+  }
+}
+function showCorrection(said, c){
+  const box = $('#corr'); box.innerHTML = ''; box.hidden = false; box.classList.toggle('good', !c);
+  const a = el('div'); a.append(el('div','lbl','Tu as dit'), el('div','said',said)); box.append(a);
+  const b = el('div');
+  if(c){ b.append(el('div','lbl','Native way to say it'), el('div','better',c.better)); if(c.explanation) b.append(el('div','why',c.explanation)); }
+  else b.append(el('div','better','✓ Natural — nothing to fix.'));
+  box.append(b);
+}
+function recordError(said, c){
+  const key = String(c.tag || 'other').toLowerCase().trim().slice(0,60);
+  const e = S.errors[key] || (S.errors[key] = {tag:key, category:c.category || 'grammar', count:0, ex:[]});
+  e.count++; e.last = Date.now();
+  e.ex.unshift({said, better:c.better, why:c.explanation || ''}); e.ex = e.ex.slice(0,3);
+  if(ses) ses.corrections.push({said, better:c.better, why:c.explanation || ''});
+}
+function addVocab(list){
+  (Array.isArray(list) ? list : []).forEach(v => {
+    if(!v || !v.word) return;
+    if(S.vocab.some(x=>x.word.toLowerCase() === v.word.toLowerCase())) return;
+    S.vocab.push({word:v.word, meaning:v.meaning || '', date:Date.now()});
+  });
+  S.vocab = S.vocab.slice(-200);
+}
+function cleanupSession(){
+  killRec(); stopSpeaking(); clearInterval(tick);
+  try{ wake && wake.release(); }catch{} wake = null;
+}
+function setScore(score){
+  score = Math.max(1, Math.min(6, score));
+  S.profile.score = score; S.profile.level = LEVELS[Math.round(score) - 1];
+}
+
+async function endSession(){
+  const s = ses; if(!s) return;
+  ses = null; cleanupSession();
+  const body = $('#endBody'); body.innerHTML = '';
+  const isTest = s.scenario.id === 'assessment';
+  $('#endTitle').textContent = isTest ? 'Ton niveau' : 'Session terminée';
+  show('end');
+  if(s.turns < 3){
+    body.append(el('div','card mut', isTest ? 'Le test a été interrompu trop tôt pour estimer ton niveau. Relance-le quand tu veux.' : 'Session trop courte pour un bilan. Temps de parole : '+fmtClock(s.speakMs)+'.'));
+    return;
+  }
+  const wait = el('div','card mut','Analyse de ta session…'); body.append(wait);
+  ses = s; const tr = transcript(); ses = null;
+  try{
+    if(isTest){
+      const r = await callLLM(`You are a certified CEFR oral examiner. Evaluate the LEARNER's spoken English from this placement interview transcript. The learner's lines are raw speech-to-text: ignore punctuation, capitalisation and probable mis-transcriptions. Consider range, accuracy, fluency and coherence, and the complexity of questions they could handle.
+Output strict JSON only: {"level":"A1|A2|B1|B2|C1|C2","summary":"2 encouraging sentences in French","strengths":["2-3 short items in French"],"weaknesses":["3-4 short, specific items in French covering grammar, vocabulary, fluency"],"errors":[{"tag":"short reusable error-type label in English","category":"grammar|vocabulary|fluency","said":"learner's words","better":"natural version","explanation":"max 15 words"}]} with at most 6 errors.`, [{role:'user', text:tr}], 0.2);
+      const idx = Math.max(0, LEVELS.indexOf(String(r.level).toUpperCase().trim()));
+      S.profile = {level:LEVELS[idx], score:idx+1, summary:r.summary || '', strengths:r.strengths || [], weaknesses:r.weaknesses || [], assessedAt:Date.now()};
+      (r.errors || []).forEach(e => e && e.better && recordError(e.said || '', e));
+      wait.remove();
+      const c = el('div','card'); const l = el('div','lvl'); l.append(el('div','big',S.profile.level), el('div',null,S.profile.summary)); c.append(l); body.append(c);
+      body.append(listCard('Points forts', S.profile.strengths), listCard('À travailler', S.profile.weaknesses));
+    }else{
+      const r = await callLLM(`You are a CEFR speaking coach. From this practice conversation transcript, assess the LEARNER only (lines are raw speech-to-text: ignore punctuation and probable mis-transcriptions). Their current recorded level is ${level()}.
+Output strict JSON only: {"level_estimate":"A1|A2|B1|B2|C1|C2","feedback":"2 encouraging, specific sentences in French","focus":"one concrete thing to practise next time, in French","weaknesses":["up to 3 short specific items in French"]}`, [{role:'user', text:tr}], 0.2);
+      if(!S.profile) S.profile = {level:'B1', score:3, weaknesses:[], strengths:[], summary:''};
+      const before = S.profile.level, est = LEVELS.indexOf(String(r.level_estimate).toUpperCase().trim());
+      if(est >= 0) setScore(S.profile.score + 0.3 * (est + 1 - S.profile.score)); // smooth: one good session doesn't jump a level
+      if(Array.isArray(r.weaknesses) && r.weaknesses.length) S.profile.weaknesses = [...new Set([...r.weaknesses, ...(S.profile.weaknesses||[])])].slice(0,5);
+      wait.remove();
+      const row = el('div','statrow');
+      [[fmtClock(s.speakMs),'temps de parole'],[s.turns,'prises de parole'],[S.profile.level,'niveau']].forEach(([a,b])=>{ const d = el('div','stat'); d.append(el('b',null,a), el('span',null,b)); row.append(d); });
+      body.append(row);
+      if(S.profile.level !== before) body.append(el('div','banner', LEVELS.indexOf(S.profile.level) > LEVELS.indexOf(before) ? '🎉 Tu passes au niveau '+S.profile.level+' !' : 'Niveau ajusté à '+S.profile.level+' pour mieux coller à ton oral.'));
+      const c = el('div','card'); c.append(el('div',null,r.feedback || ''), el('p','mut','🎯 '+(r.focus || ''))); body.append(c);
+    }
+  }catch(e){ wait.textContent = 'Bilan indisponible ('+e.message+'). Ta session est quand même enregistrée.'; if(isTest && !S.profile) wait.textContent = 'Évaluation indisponible ('+e.message+'). Relance le test.'; }
+  if(!isTest && s.corrections.length){
+    const c = el('div','card'); c.append(el('div','lbl mut','Corrections de la session'));
+    s.corrections.slice(-8).forEach(x=>{ const d = el('div','err'); const ex = el('div','ex'); ex.append(x.said+' → ', el('b',null,x.better)); d.append(ex); c.append(d); });
+    body.append(c);
+  }
+  S.stats.sessions++;
+  S.sessions.push({date:Date.now(), scenario:s.scenario.id, speakMs:s.speakMs, turns:s.turns, level:level()});
+  S.sessions = S.sessions.slice(-100);
+  save();
+}
+function listCard(title, items){
+  const c = el('div','card'); c.append(el('div','mut',title));
+  const ul = el('ul'); ul.style.cssText = 'margin:8px 0 0;padding-left:20px'; (items||[]).forEach(i=>ul.append(el('li',null,i))); c.append(ul); return c;
+}
+
+/* ---------- Views ---------- */
+function show(name){
+  ['home','talk','end','progress','settings'].forEach(v => $('#v-'+v).hidden = v !== name);
+  $('#nav').hidden = name === 'talk';
+  document.querySelectorAll('#nav button').forEach(b => b.classList.toggle('on', b.dataset.go === name));
+  if(name === 'home') renderHome();
+  if(name === 'progress') renderProgress();
+}
+function renderHome(){
+  $('#keyBanner').hidden = !!apiKey();
+  $('#assessCta').hidden = !!S.profile;
+  $('#lvlChip').textContent = S.profile ? 'Niveau '+S.profile.level : 'Niveau ?';
+  const hs = $('#homeStats'); hs.innerHTML = ''; hs.hidden = !S.profile;
+  [[level(),'niveau'],[fmtDur(S.stats.speakMs),'temps de parole'],[S.stats.sessions,'sessions']].forEach(([a,b])=>{ const d = el('div','stat'); d.append(el('b',null,a), el('span',null,b)); hs.append(d); });
+  const box = $('#scenarios'); box.innerHTML = '';
+  SCN.forEach(sc => {
+    const b = el('button', S.profile ? '' : 'locked');
+    const t = el('div'); t.append(el('b',null,sc.name), el('small',null,sc.sub));
+    b.append(el('span','ic',sc.ic), t);
+    b.onclick = () => S.profile ? startSession(sc) : toast('Fais d\'abord le test de niveau (ou passe-le).');
+    box.append(b);
+  });
+}
+function renderProgress(){
+  const body = $('#progBody'); body.innerHTML = '';
+  const c = el('div','card'); const l = el('div','lvl');
+  const info = el('div'); info.append(el('div',null,'Niveau actuel'), el('div','mut', S.profile ? (S.profile.summary || 'Mis à jour après chaque session.') : 'Fais le test de niveau pour démarrer.'));
+  l.append(el('div','big', S.profile ? S.profile.level : '–'), info); c.append(l);
+  const bar = el('div','bar'); const li = S.profile ? LEVELS.indexOf(S.profile.level) : -1;
+  LEVELS.forEach((x,i)=>bar.append(el('i', i <= li ? 'on' : ''))); LEVELS.forEach(x=>bar.append(el('small',null,x))); c.append(bar);
+  body.append(c);
+  const row = el('div','statrow');
+  [[fmtDur(S.stats.speakMs),'temps de parole cumulé'],[S.stats.sessions,'sessions'],[S.vocab.length,'mots appris']].forEach(([a,b])=>{ const d = el('div','stat'); d.append(el('b',null,a), el('span',null,b)); row.append(d); });
+  body.append(row);
+  body.append(el('h2',null,'Top 5 de mes erreurs à corriger'));
+  const ec = el('div','card'); const errs = topErrors(5);
+  if(!errs.length) ec.append(el('div','mut','Aucune erreur enregistrée pour l\'instant. Elles apparaîtront ici au fil des sessions.'));
+  errs.forEach(e => {
+    const d = el('div','err'); const h = el('div','h'); h.append(el('span',null,e.tag), el('span','n','×'+e.count)); d.append(h);
+    if(e.ex[0]){ const ex = el('div','ex'); ex.append((e.ex[0].said || '…')+' → ', el('b',null,e.ex[0].better)); d.append(ex); if(e.ex[0].why) d.append(el('div','ex',e.ex[0].why)); }
+    ec.append(d);
+  });
+  body.append(ec);
+  if(S.profile && (S.profile.weaknesses||[]).length){ body.append(el('h2',null,'Points faibles identifiés'), listCard('', S.profile.weaknesses)); }
+  if(S.vocab.length){
+    body.append(el('h2',null,'Vocabulaire appris'));
+    const vc = el('div','card'); const tg = el('div','tags');
+    S.vocab.slice(-30).reverse().forEach(v=>{ const s = el('span',null,v.word); s.title = v.meaning; s.onclick = ()=>toast(v.word+' — '+v.meaning); tg.append(s); });
+    vc.append(tg); body.append(vc);
+  }
+  const b = el('button','btn','🎙️ Refaire le test de niveau'); b.onclick = () => startSession(ASSESS); body.append(b);
+}
+function bindSettings(){
+  document.querySelectorAll('[data-k]').forEach(inp => {
+    const k = inp.dataset.k;
+    if(inp.type === 'checkbox') inp.checked = !!S.settings[k]; else inp.value = S.settings[k];
+    inp.onchange = () => { S.settings[k] = inp.type === 'checkbox' ? inp.checked : inp.value.trim(); save(); };
+  });
+}
+
+/* ---------- Events ---------- */
+$('#nav').onclick = e => { const b = e.target.closest('button'); if(b) show(b.dataset.go); };
+$('#btnAssess').onclick = () => startSession(ASSESS);
+$('#btnSkip').onclick = () => { S.profile = {level:'B1', score:3, weaknesses:[], strengths:[], summary:''}; save(); renderHome(); };
+$('#btnEnd').onclick = () => endSession();
+$('#btnHome').onclick = () => show('home');
+$('#btnMode').onclick = () => {
+  if(useWhisper()) return toast('Mains libres indisponible avec Whisper.');
+  S.settings.handsFree = !S.settings.handsFree; save(); bindSettings(); renderMode(); setState(state);
+};
+$('#orb').onclick = () => {
+  if(!ses || state === 'thinking') return;
+  if(state === 'listening') stopListening(); else startListening(); // idle, or interrupting the AI
+};
+$('#btnTestVoice').onclick = async () => { await speak('Hi! I\'m Alex, your speaking partner. Ready when you are.'); state = 'idle'; };
+$('#btnExport').onclick = () => {
+  const copy = {...S, settings:{...S.settings, geminiKey:'', openaiKey:''}};
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(copy,null,2)], {type:'application/json'}));
+  a.download = 'speak-coach-data.json'; a.click();
+};
+$('#btnReset').onclick = () => { if(confirm('Effacer le niveau, l\'historique, les erreurs et les clés API ?')){ localStorage.removeItem(LS); S = load(); bindSettings(); show('home'); } };
+document.addEventListener('visibilitychange', () => { if(document.hidden && ses){ killRec(); stopSpeaking(); setState('idle'); } });
+
+if('speechSynthesis' in window){ loadVoices(); speechSynthesis.onvoiceschanged = loadVoices; }
+bindSettings(); show('home');
+if('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(()=>{});
+</script>
+</body>
+</html>
